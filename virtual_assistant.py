@@ -1,292 +1,693 @@
-#To recognise speech
-import speech_recognition as sr 
-#To play an audio
-import playsound
-import random
-#Google Text to speech
-from gtts import gTTs 
-#To open web-browser
-import webbrowser
-import ssl
-import certifi
-import time 
-#To remove the audio files
+from __future__ import print_function
+import speech_recognition as sr
 import os
-import subprocess
-from PIL import Image
-import pyautogui
+import time
+from gtts import gTTS
+import datetime
+import pyjokes
+import warnings
+import webbrowser
+import calendar
 import pyttsx3
-import bs4 as bs
-import urllib.request
+import random
+import smtplib
+import wikipedia
+import playsound
+import wolframalpha
+import requests
+import json
+import winshell
+import subprocess
+import ctypes
+from twilio.rest import Client
+import pickle
+import os.path
+from google.auth.transport.requests import Request
+from google.oauth2.credentials import Credentials
+from google_auth_oauthlib.flow import InstalledAppFlow
+from googleapiclient.discovery import build
+from googleapiclient.errors import HttpError
+from selenium import webdriver
+from time import sleep
 
-class person:
-    name=''
-    def setName(self.name):
-        self.name = name
+warnings.filterwarnings("ignore")
 
-class asis:
-    name=''
-    def setName(self.name):
-        self.name=name
+engine = pyttsx3.init()
+voices = engine.getProperty("voices")
+engine.setProperty("voice", voices[0].id)
 
-def there_exists(terms):
-    for term in terms:
-        if term in value_date:
-            return True
+SCOPES = ['https://www.googleapis.com/auth/calendar.readonly']
 
-def engine_speak(text):
-    text=str(text)
-    engine.say(text)
+
+def talk(audio):
+    engine.say(audio)
     engine.runAndWait()
 
-#To initialize the recognizer
-#It is used to listen the audio and convert it into text
-r=sr.Recognizer()
 
-def record_audio(ask=""):
-    #Defining Microphone as source to receive audio as input
+def rec_audio():
+    recog = sr.Recognizer()
+
     with sr.Microphone() as source:
-        if ask: 
-            engine_speak(ask)
-        #To listen audio via source i.e. microphone 
-        audio=r.listen(source, 5, 5)
-        print("Done Listening")
-        voice_data=""
+        print("Listening...")
+        audio = recog.listen(source)
+
+    data = " "
+
+    try:
+        data = recog.recognize_google(audio)
+        print("You said: " + data)
+    except sr.UnknownValueError:
+        print("Assistant could not understand the audio")
+    except sr.RequestError as ex:
+        print("Request Error from Google Speech Recognition" + ex)
+
+    return data
+
+
+def response(text):
+    print(text)
+    tts = gTTS(text=text, lang="en")
+    audio = "Audio.mp3"
+    tts.save(audio)
+    playsound.playsound(audio)
+    os.remove(audio)
+
+
+
+def call(text):
+    action_call = "assistant"
+
+    text = text.lower()
+
+    if action_call in text:
+        return True
+
+    return False
+
+
+def today_date():
+    now = datetime.datetime.now()
+    date_now = datetime.datetime.today()
+    week_now = calendar.day_name[date_now.weekday()]
+    month_now = now.month
+    day_now = now.day
+
+    months = [
+        "January",
+        "February",
+        "March",
+        "April",
+        "May",
+        "June",
+        "July",
+        "August",
+        "September",
+        "October",
+        "November",
+        "December",
+    ]
+
+    ordinals = [
+        "1st",
+        "2nd",
+        "3rd",
+        "4th",
+        "5th",
+        "6th",
+        "7th",
+        "8th",
+        "9th",
+        "10th",
+        "11th",
+        "12th",
+        "13th",
+        "14th",
+        "15th",
+        "16th",
+        "17th",
+        "18th",
+        "19th",
+        "20th",
+        "21st",
+        "22nd",
+        "23rd",
+        "24th",
+        "25th",
+        "26th",
+        "27th",
+        "28th",
+        "29th",
+        "30th",
+        "31st",
+    ]
+
+    return "Today is " + week_now + ", " + months[month_now - 1] + " the " + ordinals[day_now - 1] + "."
+
+
+def say_hello(text):
+    greet = ["hi", "hey", "hola", "greetings", "wassup", "hello"]
+
+    response = ["howdy", "whats good", "hello", "hey there"]
+
+    for word in text.split():
+        if word.lower() in greet:
+            return random.choice(response) + "."
+
+    return ""
+
+
+def wiki_person(text):
+    list_wiki = text.split()
+    for i in range(0, len(list_wiki)):
+        if i + 3 <= len(list_wiki) - 1 and list_wiki[i].lower() == "who" and list_wiki[i + 1].lower() == "is":
+            return list_wiki[i + 2] + " " + list_wiki[i + 3]
+
+
+def send_email(to, content):
+    server = smtplib.SMTP("smtp.gmail.com", 587)
+    server.ehlo()
+    server.starttls()
+
+    # Enable low security in gmail
+    server.login("email", "pass")
+    server.sendmail("email", to, content)
+    server.close()
+
+
+def note(text):
+    date = datetime.datetime.now()
+    file_name = str(date).replace(":", "-") + "-note.txt"
+    with open(file_name, "w") as f:
+        f.write(text)
+
+    subprocess.Popen(["notepad.exe", file_name])
+
+def google_calendar():
+    """Shows basic usage of the Google Calendar API.
+    Prints the start and name of the next 10 events on the user's calendar.
+    """
+    creds = None
+    if os.path.exists('token.json'):
+        creds = Credentials.from_authorized_user_file('token.json', SCOPES)
+    if not creds or not creds.valid:
+        if creds and creds.expired and creds.refresh_token:
+            creds.refresh(Request())
+        else:
+            flow = InstalledAppFlow.from_client_secrets_file(
+                'credentials.json', SCOPES)
+            creds = flow.run_local_server(port=0)
+        with open('token.json', 'w') as token:
+            token.write(creds.to_json())
+
+
+    service = build('calendar', 'v3', credentials=creds)
+
+    return service
+
+
+def calendar_events(num, service):
+    talk(f'Hey there! Good Day. Hope you are doing fine. These are the events to do today')
+    # Call the Calendar API
+    now = datetime.datetime.utcnow().isoformat() + 'Z'  # 'Z' indicates UTC time
+    print(f'Getting the upcoming {num} events')
+    events_result = service.events().list(calendarId='primary', timeMin=now, maxResults=num, singleEvents=True,
+                                          orderBy='startTime').execute()
+    events = events_result.get('items', [])
+
+    if not events:
+        talk('No upcoming events found.')
+    for event in events:
+        start = event['start'].get('dateTime', event['start'].get('date'))
+        events_today = (event['summary'])
+        start_time = str(start.split("T")[1].split("-")[0])  # get the hour the event starts
+        if int(start_time.split(":")[0]) < 12:  # if the event is in the morning
+            start_time = start_time + "am"
+        else:
+            start_time = str(int(start_time.split(":")[0]) - 12)  # convert 24 hour time to regular
+            start_time = start_time + "pm"
+        talk(f'{events_today} at {start_time}')
+
+
+try:
+    service = google_calendar()
+    calendar_events(10, service)
+except:
+    talk("Could not connect to the local wifi network. Please try again later.")
+    exit()
+
+
+def pizza():
+    driver = webdriver.Chrome(
+        r"C:\...\chromedriver.exe"  # Location of your webdriver
+    )
+    driver.maximize_window()  # Maximizes the browser window
+
+    talk("Opening Dominos")
+    driver.get('https://www.dominos.co.in/')  # Open the site
+    sleep(2)
+
+    talk("Getting ready to order")
+    driver.find_element_by_link_text('ORDER ONLINE NOW').click()  # Click on order now button
+    sleep(2)
+
+    talk("Finding your location")
+    driver.find_element_by_class_name('srch-cnt-srch-inpt').click()  # Click on the location search
+    sleep(2)
+
+    location = ""  # Enter your location
+
+    talk("Entering your location")
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div[1]/div[2]/div/div[1]/div/div[3]/div/div[1]/div[2]/div/div[1]/input').send_keys(
+        location)  # Send text to location search input field
+    sleep(2)
+
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div[1]/div[2]/div/div[1]/div/div[3]/div/div[1]/div[2]/div[2]/div/ul/li[1]').click()  # Select the location from suggestions
+    sleep(2)
+
+    try:
+        driver.find_element_by_xpath(
+            '//*[@id="__next"]/div/div/div[1]/div[1]/div/div[3]/div[3]/div[1]/div[2]').click()  # Click on login button
+        sleep(2)
+    except:
+        talk("Your location could not be found. Please try again later.")
+        exit()
+
+    talk("Logging in")
+    phone_num = ""  # Enter your phone number here
+
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div/div[1]/div[1]/div/div[3]/div[3]/div[2]/div/div[3]/div/div/div/div[2]/div/form/div[1]/div[2]/input').send_keys(
+        phone_num)  # Send text to phone number input field
+    sleep(2)
+
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div/div[1]/div[1]/div/div[3]/div[3]/div[2]/div/div[3]/div/div/div/div[2]/div/form/div[2]/input').click()
+    sleep(2)
+
+    talk("What is your O T P? ")
+    sleep(3)
+
+    otp_log = rec_audio()
+
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div/div[1]/div[1]/div/div[3]/div[3]/div[2]/div/div[3]/div/div/div/div[2]/div/div/div/div[1]/input').send_keys(
+        otp_log)  # Paste the OTP into the text field
+    sleep(2)
+
+    driver.find_element_by_xpath(
+        '//*[@id="__next"]/div/div/div[1]/div[1]/div/div[3]/div[3]/div[2]/div/div[3]/div/div/div/div[2]/div/div/div/div[2]/div[2]/button/span').click()  # Submit OTP
+    sleep(2)
+
+    talk("Do you want me to order from your favorites?")
+    query_fav = rec_audio()
+
+    if "yes" in query_fav:
         try:
-            #To convert audio into text
-            voice_data=r.recognise_google(audio)
-        
-        #To except the error when the recogniser is not able to understand the input
-        except sr.UnkonwnValueError:
-            engine_speak("Sorry sir, I didn't get that")
-        #To except the error when the reconizer is not connected to the internet
-        except sr.RequestError:
-            engine_speak("Sorry No internet connection")
-            #To print what the user input
-            print(">>",voice_data.lower())
-            return voice_data.lower()
+            driver.find_element_by_xpath(
+                '//*[@id="mn-lft"]/div[6]/div/div[6]/div/div/div[2]/div[3]/div/button/span').click()  # Add your favorite pizza
+            sleep(1)
+        except:
+            talk("The entered OTP is incorrect.")
+            exit()
 
-#To convert the text into speech which will be spoken by our assistant i.e engine
-def engine_speak(audio_string):
-    audio_string=str(audio_string):
-    #Text to Speech
-    tts=gTTS(text=audio_string, lang='en')
-    r=random.randint(1,20000000)
-    audio_file='audio' + str(r) + '.mp3'
-    #To save converted text into audio in mp3 form
-    tts.save(audio_file)
-    #To play the audio which is actually the voice of our assistant
-    playsound.playsound(audio_file)
-    #To print what our assistant said
-    print(asis_obj.name+ ":",audio_string)
-    #To remove the file
-    os.remove(audio_file)
-
-def respond(voice_data):
-    #1) Greetings
-    if there_exists(["hello","hi","hey","hey boss","hola"]):
-        greetings=['Hey, how can I help you ?'+person_obj.name, 'How can I help you ?'+person_obj.name, 'Hello'+person_obj.name]
-        greet=greetings[random.randint(0,length(greetings)-1)]
-        engine_speak(greet)
-
-    #2) Name
-    if there_exists(["What is your name?","Tell me your name.."]):
-        if person_obj.name:
-            engine_speak("I don't know my name, please give me my name by saying command your name should be......what is your name ")
-        else: 
-            engine_speak("What's your name sir/ma'am ?")
-
-    if there_exists(["My name is"]):
-        person_name=voice_data.split("is")[-1].strip()
-        engine_speak("Okay Sir/Ma'am I'll remember that your name is"+person_name())
-        person_obj.setName(person_name)
-
-    if there_exists(["Your name should be"]):
-        asis_name=voice_data.split('be')[-1].strip()
-        engine_speak("Okay, I'll remember that my name is"+asis_name())
-        asis_obj.setName(asis_name) #Remembering the given name
-
-    #3) Greetings 
-    if there_exists(["How are you ?","How are you doing ?"]):
-        engine_speak("I'm very well! Thanks for asking"+person_obj.name)
-
-    #4)Time 
-    if there_exists(["Whats the time?","Tell me the Time.."]):
-        time=ctime().split(" ")[3].split(":")[0:2]
-        if time[0]=="00":
-            hours='12'
+        talk("Adding your favorites to cart")
+        talk("Do you want me to add extra cheese to your pizza?")
+        ex_cheese = rec_audio()
+        if "yes" in ex_cheese:
+            talk("Extra cheese added")
+            driver.find_element_by_xpath(
+                '//*[@id="mn-lft"]/div[6]/div/div[1]/div/div/div[2]/div[3]/div[2]/button').click()  # Add extra cheese
+        elif "no" in ex_cheese:
+            driver.find_element_by_xpath(
+                '//*[@id="mn-lft"]/div[6]/div/div[1]/div/div/div[2]/div[3]/div[1]/button/span').click()
         else:
-            hours=time[0]
-            minutes=time[1]
-            time=hours+' hours and '+minutes+" minutes"
-            engine_speak(time)
+            talk("I dont know that")
+            driver.find_element_by_xpath(
+                '//*[@id="mn-lft"]/div[6]/div/div[1]/div/div/div[2]/div[3]/div[1]/button/span').click()
 
-    #5)Searching
-    if there_exists(["Search for"]) and 'Youtube' not in voice_data:
-        search_term=voice_data.split("for")[-1]
-        url="https://google.com/search?q"+search_term
-        webbrowser.get().open(url)
-        engine_speak("Here is what I found for "+search_term+" on google")
+        driver.find_element_by_xpath(
+            '//*[@id="mn-lft"]/div[16]/div/div[1]/div/div/div[2]/div[2]/div/button').click()  # Add a pepsi
+        sleep(1)
 
-    #6)Open youtube and search
-    if there_exists(["youtube"]):
-        search_term=voice_data.split("for")[-1]
-        url="https://www.youtube.com/results?search_query="+search_term
-        webbrowser.get().open(url)
-        engine_speak("Here is what I found for "+search_term+" on youtube")
-
-    #7)To Know the Stock Price
-    if there_exists(["price of "]):
-        search_term=voice_data.split("for")[-1]
-        url="https://google.com/search?q"+search_term
-        webbrowser.get().open(url)
-        engine_speak("Here is what I found for "+search_term+" on google")
-
-    #Search for music
-    if there_exists(["play music"]):
-        search_term= voice_data.split("for")[-1]
-        url="https://open.spotify.com/search/"+search_term
-        webbrowser.get().open(url)
-        engine_speak("You are listening to "+ search_term +" enjoy sir/ma'am")
-
-    #Search for amazon.com
-    if there_exists(["amazon.com"]):
-        search_term = voice_data.split("for")[-1]
-        url="https://www.amazon.in"+search_term
-        webbrowser.get().open(url)
-        engine_speak("Here is what I found for "+search_term + " on amazon.com")
-         
-    #make a note
-    if there_exists(["make a note"]):
-        search_term=voice_data.split("for")[-1]
-        url="https://keep.google.com/#home"
-        webbrowser.get().open(url)
-        engine_speak("Here's where you can make notes...")
-        
-    #open instagram
-    if there_exists(["open instagram","want to have some fun time"]):
-        search_term=voice_data.split("for")[-1]
-        url="https://www.instagram.com/"
-        webbrowser.get().open(url)
-        engine_speak("Opening Instagram")
-        
-    #open twitter
-    if there_exists(["open twitter"]):
-        search_term=voice_data.split("for")[-1]
-        url="https://twitter.com/"
-        webbrowser.get().open(url)
-        engine_speak("Opening Twitter")
-        
-    #8 time table
-    if there_exists(["show my time table"]):
-        im = Image.open(r"D:\AI and ml project\Virtual Assistant\VI sem- CSE.docx")
-        im.show()
-    
-    #9 weather
-    if there_exists(["weather","tell me the weather report","whats the condition outside"]):
-        search_term = voice_data.split("for")[-1]
-        url = "https://www.google.com/search?sxsrf=ACYBGNSQwMLDByBwdVFIUCbQqya-ET7AAA%3A1578847393212&ei=oUwbXtbXDN-C4-EP-5u82AE&q=weather&oq=weather&gs_l=psy-ab.3..35i39i285i70i256j0i67l4j0i131i67j0i131j0i67l2j0.1630.4591..5475...1.2..2.322.1659.9j5j0j1......0....1..gws-wiz.....10..0i71j35i39j35i362i39._5eSPD47bv8&ved=0ahUKEwiWrJvwwP7mAhVfwTgGHfsNDxsQ4dUDCAs&uact=5"
-        webbrowser.get().open(url)
-        engine_speak("Here is what I found for "+search_term+" on google")
-    
-    #open gmail
-    if there_exists(["open my mail","gmail","check my email"]):
-        search_term = voice_data.split("for")[-1]
-        url="https://mail.google.com/mail/u/0/#inbox"
-        webbrowser.get().open(url)
-        engine_speak("Here's where you can check your gmail")   
-
-    #10 stone paper scisorrs
-    
-    if there_exists(["game"]):
-        voice_data = record_audio("choose among rock paper or scissor")
-        moves=["rock", "paper", "scissor"]
-    
-        cmove=random.choice(moves)
-        pmove=voice_data
-        
-
-        engine_speak("The computer chose " + cmove)
-        engine_speak("You chose " + pmove)
-        #engine_speak("hi")
-        if pmove==cmove:
-            engine_speak("the match is draw")
-        elif pmove== "rock" and cmove== "scissor":
-            engine_speak("Player wins")
-        elif pmove== "rock" and cmove== "paper":
-            engine_speak("Computer wins")
-        elif pmove== "paper" and cmove== "rock":
-            engine_speak("Player wins")
-        elif pmove== "paper" and cmove== "scissor":
-            engine_speak("Computer wins")
-        elif pmove== "scissor" and cmove== "paper":
-            engine_speak("Player wins")
-        elif pmove== "scissor" and cmove== "rock":
-            engine_speak("Computer wins")
-
-    #11 toss a coin
-    if there_exists(["toss","flip","coin"]):
-        moves=["head", "tails"]   
-        cmove=random.choice(moves)
-        engine_speak("The computer chose " + cmove)
-
-    #12 calc
-    if there_exists(["plus","minus","multiply","divide","power","+","-","*","/"]):
-        opr = voice_data.split()[1]
-
-        if opr == '+':
-            engine_speak(int(voice_data.split()[0]) + int(voice_data.split()[2]))
-        elif opr == '-':
-            engine_speak(int(voice_data.split()[0]) - int(voice_data.split()[2]))
-        elif opr == 'multiply':
-            engine_speak(int(voice_data.split()[0]) * int(voice_data.split()[2]))
-        elif opr == 'divide':
-            engine_speak(int(voice_data.split()[0]) / int(voice_data.split()[2]))
-        elif opr == 'power':
-            engine_speak(int(voice_data.split()[0]) ** int(voice_data.split()[2]))
-        else:
-            engine_speak("Wrong Operator")
-        
-    #13 screenshot
-    if there_exists(["capture","my screen","screenshot"]):
-        myScreenshot = pyautogui.screenshot()
-        myScreenshot.save('C:/Users/YASH/Pictures/Screenshots') 
-    
-    
-    #14 Search on wikipedia
-    if there_exists(["definition of"]):
-        definition=record_audio("What do you need the definition of")
-        url=urllib.request.urlopen('https://en.wikipedia.org/wiki/'+definition)
-        soup=bs.BeautifulSoup(url,'lxml')
-        definitions=[]
-        for paragraph in soup.find_all('p'):
-            definitions.append(str(paragraph.text))
-        if definitions:
-            if definitions[0]:
-                engine_speak('I\'m sorry I could not find that definition, please try a web search')
-            elif definitions[1]:
-                engine_speak('Here is what I found '+definitions[1])
+        talk("Would you like to increase the qty?")
+        qty = rec_audio()
+        qty_pizza = 0
+        qty_pepsi = 0
+        if "yes" in qty:
+            talk("Would you like to increase the quantity of pizza?")
+            wh_qty = rec_audio()
+            if "yes" in wh_qty:
+                talk("How many more pizzas would you like to add? ")
+                try:
+                    qty_pizza = rec_audio()
+                    qty_pizza = int(qty_pizza)
+                    if qty_pizza > 0:
+                        talk_piz = f"Adding {qty_pizza} more pizzas"
+                        talk(talk_piz)
+                        for i in range(qty_pizza):
+                            driver.find_element_by_xpath(
+                                '//*[@id="__next"]/div/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div/div[1]/div[1]/div/div/div[2]/div/div/div[2]').click()
+                except:
+                    talk("I dont know that.")
             else:
-                engine_speak ('Here is what I found '+definitions[2])
+                pass
+
+            talk("Would you like to increase the quantity of pepsi?")
+            pep_qty = rec_audio()
+            if "yes" in pep_qty:
+                talk("How many more pepsis would you like to add? ")
+                try:
+                    qty_pepsi = rec_audio()
+                    qty_pepsi = int(qty_pepsi)
+                    if qty_pepsi > 0:
+                        talk_pep = f"Adding {qty_pepsi} more pepsis"
+                        talk(talk_pep)
+                        for i in range(qty_pepsi):
+                            driver.find_element_by_xpath(
+                                '//*[@id="__next"]/div/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div/div[1]/div[2]/div/div/div[2]/div/div/div[2]').click()
+                except:
+                    talk("I dont know that.")
+            else:
+                pass
+
+        elif "no" in qty:
+            pass
+
+        total_pizza = qty_pizza + 1
+        total_pepsi = qty_pepsi + 1
+        tell_num = f"This is your list of order. {total_pizza} Pizzas and {total_pepsi} Pepsis. Do you want to checkout?"
+        talk(tell_num)
+        check_order = rec_audio()
+        if "yes" in check_order:
+            talk("Checking out")
+            driver.find_element_by_xpath(
+                '//*[@id="__next"]/div/div/div[1]/div[2]/div[2]/div[2]/div[2]/div/div/div[2]/div[2]/button').click()  # Click on checkout button
+            sleep(1)
+            total = driver.find_element_by_xpath(
+                '//*[@id="__next"]/div/div[1]/div[2]/div[3]/div[2]/div/div[6]/div/div/div[6]/span[2]/span')
+            total_price = f'total price is {total.text}'
+            talk(total_price)
+            sleep(1)
         else:
-                engine_speak("I'm sorry I could not find the definition for "+definition)
+            exit()
 
+        talk("Placing your order")
+        driver.find_element_by_xpath(
+            '//*[@id="__next"]/div/div[1]/div[2]/div[3]/div[2]/div/div[6]/div/div/div[8]/button').click()  # Click on place order button
+        sleep(2)
 
-    if there_exists(["exit", "quit", "goodbye"]):
-        engine_speak("we could continue more sir, but.,,...,,,,,..,,,,, byee")
+        talk("Saving your location")
+        driver.find_element_by_xpath(
+            '//*[@id="__next"]/div/div[1]/div[2]/div[3]/div[2]/div/div[3]/div/div[3]/div/div/div[3]/div/div/input').click()  # Save your location
+        sleep(2)
+
+        talk("Do you want to confirm your order?")
+        confirm = rec_audio()
+        if "yes" in confirm:
+            try:
+                driver.find_element_by_xpath(
+                    '//*[@id="__next"]/div/div[1]/div[2]/div/div[1]/div[2]/div/div[2]/div/div[2]/button').click()
+                sleep(2)
+            except:
+                talk("The store is currently offline.")
+                exit()
+
+            talk("Placing your order")
+
+            talk("Your order is places successfully. Wait for Dominos to deliver your order. Enjoy your day!")
+        else:
+            exit()
+
+    else:
         exit()
 
 
-time.sleep(1)
+while True:
 
-person_obj = person()
-asis_obj = asis()
-asis_obj.name = 'Kim'
-engine = pyttsx3.init()
+    try:
+        text = rec_audio()
+        speak = ""
+
+        if call(text):
+
+            speak = speak + say_hello(text)
+
+            if "date" in text or "day" in text or "month" in text:
+                get_today = today_date()
+                speak = speak + " " + get_today
+
+            elif "time" in text:
+                now = datetime.datetime.now()
+                meridiem = ""
+                if now.hour >= 12:
+                    meridiem = "p.m"
+                    hour = now.hour - 12
+                else:
+                    meridiem = "a.m"
+                    hour = now.hour
+
+                if now.minute < 10:
+                    minute = "0" + str(now.minute)
+                else:
+                    minute = str(now.minute)
+                speak = speak + " " + "It is " + str(hour) + ":" + minute + " " + meridiem + " ."
+
+            elif "wikipedia" in text or "Wikipedia" in text:
+                if "who is" in text:
+                    person = wiki_person(text)
+                    wiki = wikipedia.summary(person, sentences=2)
+                    speak = speak + " " + wiki
+
+            elif "where is" in text:
+                ind = text.lower().split().index("is")
+                location = text.split()[ind + 1:]
+                url = "https://www.google.com/maps/place/" + "".join(location)
+                speak = speak + "This is where " + str(location) + " is."
+                webbrowser.open(url)
+
+            elif "what is the weather in" in text:
+                key = ""
+                weather_url = "http://api.openweathermap.org/data/2.5/weather?"
+                ind = text.split().index("in")
+                location = text.split()[ind + 1:]
+                location = "".join(location)
+                url = weather_url + "appid=" + key + "&q=" + location
+                js = requests.get(url).json()
+                if js["cod"] != "404":
+                    weather = js["main"]
+                    temperature = weather["temp"]
+                    temperature = temperature - 273.15
+                    humidity = weather["humidity"]
+                    desc = js["weather"][0]["description"]
+                    weatherResponse = " The temperature in Celcius is " + str(temperature) + " The humidity is " + str(
+                        humidity) + " and The weather description is " + str(desc)
+                    speak = speak + weatherResponse
+                else:
+                    speak = speak + "City Not Found"
+
+            elif "who are you" in text or "define yourself" in text:
+                speak = speak + "Hello, I am NIKO. Your Assistant. I am here to make your life easier. You can command me to perform various tasks such as asking questions or opening applications etcetera"
+
+            elif "made you" in text or "created you" in text:
+                speak = speak + "I was created by Deon Cardoza"
+
+            elif "your name" in text:
+                speak = speak + "My name is NIKO"
+
+            elif "who am I" in text:
+                speak = speak + "You must probably be a human"
+
+            elif "why do you exist" in text or "why did you come to this word" in text:
+                speak = speak + "It is a secret"
+
+            elif "how are you" in text:
+                speak = speak + "I am awesome, Thank you"
+                speak = speak + "\nHow are you?"
+
+            elif "fine" in text or "good" in text:
+                speak = speak + "It's good to know that your fine"
+
+            elif "don't listen" in text or "stop listening" in text or "do not listen" in text:
+                talk("for how many seconds do you want me to sleep")
+                a = int(rec_audio())
+                time.sleep(a)
+                speak = speak + str(a) + " seconds completed. Now you can ask me anything"
+
+            elif "exit" in text or "quit" in text:
+                exit()
+
+            elif "open" in text.lower():
+                if "chrome" in text.lower():
+                    speak = speak + "Opening Google Chrome"
+                    os.startfile(
+                        r"C:\Program Files\Google\Chrome\Application\chrome.exe"
+                    )
+                elif "word" in text.lower():
+                    speak = speak + "Opening Microsoft Word"
+                    os.startfile(
+                        r"C:\Program Files\Microsoft Office\root\Office16\WINWORD.EXE"
+                    )
+
+                elif "excel" in text.lower():
+                    speak = speak + "Opening Microsoft Excel"
+                    os.startfile(
+                        r"C:\Program Files\Microsoft Office\root\Office16\EXCEL.EXE"
+                    )
+
+                elif "vs code" in text.lower():
+                    speak = speak + "Opening Visual Studio Code"
+                    os.startfile(
+                        r"C:\Users\HP\AppData\Local\Programs\Microsoft VS Code\Code.exe"
+                    )
+
+                elif "youtube" in text.lower():
+                    speak = speak + "Opening Youtube\n"
+                    webbrowser.open("https://youtube.com/")
+
+                elif "google" in text.lower():
+                    speak = speak + "Opening Google\n"
+                    webbrowser.open("https://google.com/")
+
+                elif "stackoverflow" in text.lower():
+                    speak = speak + "Opening StackOverFlow"
+                    webbrowser.open("https://stackoverflow.com/")
+
+                else:
+                    speak = speak + "Application not available"
+
+            elif "youtube" in text.lower():
+                ind = text.lower().split().index("youtube")
+                search = text.split()[ind + 1:]
+                webbrowser.open(
+                    "http://www.youtube.com/results?search_query=" +
+                    "+".join(search)
+                )
+                speak = speak + "Opening " + str(search) + " on youtube"
+
+            elif "search" in text.lower():
+                ind = text.lower().split().index("search")
+                search = text.split()[ind + 1:]
+                webbrowser.open(
+                    "https://www.google.com/search?q=" + "+".join(search))
+                speak = speak + "Searching " + str(search) + " on google"
+
+            elif "google" in text.lower():
+                ind = text.lower().split().index("google")
+                search = text.split()[ind + 1:]
+                webbrowser.open(
+                    "https://www.google.com/search?q=" + "+".join(search))
+                speak = speak + "Searching " + str(search) + " on google"
+
+            elif "play music" in text or "play song" in text:
+                talk("Here you go with music")
+                music_dir = r"C:\Users\HP\Music\Videoder"
+                songs = os.listdir(music_dir)
+                d = random.choice(songs)
+                random = os.path.join(music_dir, d)
+                playsound.playsound(random)
+
+            elif "joke" in text:
+                speak = speak + pyjokes.get_joke()
+
+            elif "empty recycle bin" in text:
+                winshell.recycle_bin().empty(
+                    confirm=True, show_progress=False, sound=True
+                )
+                speak = speak + "Recycle Bin Emptied"
+
+            elif "email to computer" in text or "gmail to computer" in text:
+                try:
+                    talk("What should I say?")
+                    content = rec_audio()
+                    to = "Receiver email address"
+                    send_email(to, content)
+                    speak = speak + "Email has been sent !"
+                except Exception as e:
+                    print(e)
+                    talk("I am not able to send this email")
+
+            elif "mail" in text or "email" in text or "gmail" in text:
+                try:
+                    talk("What should I say?")
+                    content = rec_audio()
+                    talk("whom should i send")
+                    to = input("Enter To Address: ")
+                    send_email(to, content)
+                    speak = speak + "Email has been sent !"
+                except Exception as e:
+                    print(e)
+                    speak = speak + "I am not able to send this email"
+
+            elif "make a note" in text:
+                talk("What would you like me to write down?")
+                note_text = rec_audio()
+                note(note_text)
+                speak = speak + "I have made a note of that."
+
+            elif "news" in text:
+                url = (
+                    "http://newsapi.org/v2/top-headlines?"
+                    "country=in&"
+                    "apiKey=748904e696f047f59be2f65586018b33"
+                )
+
+                try:
+                    response = requests.get(url)
+                except:
+                    talk("Please check your connection")
+
+                news = json.loads(response.text)
+
+                for new in news["articles"]:
+                    print(str(new["title"]), "\n")
+                    talk(str(new["title"]))
+                    engine.runAndWait()
+
+                    print(str(new["description"]), "\n")
+                    talk(str(new["description"]))
+                    engine.runAndWait()
+                    time.sleep(2)
+
+            elif "send message" in text:
+                account_sid = "AC1efb797482d4c8196cd7b60a5e1f1d30"
+                auth_token = "e679a159eaefa1ee2e9f465947337768"
+                client = Client(account_sid, auth_token)
+
+                talk("What should i send")
+                message = client.messages.create(
+                    body=rec_audio(), from_="", to=""
+                )
+
+                print(message.sid)
+                speak = speak + "Message sent successfully"
+
+            elif "calculate" in text or 'send a message' in text:
+                app_id = ""
+                client = wolframalpha.Client(app_id)
+                ind = text.lower().split().index("calculate")
+                text = text.split()[ind + 1:]
+                res = client.query(" ".join(text))
+                answer = next(res.results).text
+                speak = speak + "The answer is " + answer
+
+            elif "what is" in text or "who is" in text:
+                app_id = ""
+                client = wolframalpha.Client(app_id)
+                ind = text.lower().split().index("is")
+                text = text.split()[ind + 1:]
+                res = client.query(" ".join(text))
+                answer = next(res.results).text
+                speak = speak + answer
+
+            elif "order a pizza" in text or "pizza" in text:
+                pizza()
 
 
-while(1):
-    voice_data = record_audio("Recording") # get the voice input
-    print("Done")
-    print("Q:", voice_data)
-    respond(voice_data) # respond 
+
+            # Assistant Audio speak
+            response(speak)
+
+    except:
+        talk("I don't know that")
